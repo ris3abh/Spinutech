@@ -1,65 +1,41 @@
-from langchain.prompts import PromptTemplate
-from langchain_community.utilities import WikipediaAPIWrapper
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import tool
 
-# Initialize Wikipedia API wrapper
-wikipedia = WikipediaAPIWrapper()
-
-# Article generation prompt template
-article_prompt = PromptTemplate(
-    input_variables=["topic", "tone", "length", "keywords"],
-    template="""
-    You are a professional blogger and technical writer. Write a {length} article about {topic} 
-    with a {tone} tone. Include these keywords: {keywords}. Structure the article with:
-    - Catchy title
-    - Introduction
-    - 3-5 main sections
-    - Conclusion
-    - SEO-optimized meta description
-    """
-)
+from SEOoptimization.models.openai import initialize_llm
+from SEOoptimization.prompts.article_prompt import article_prompt
 
 def parse_input(input_text):
     """Parse input text to extract topic, tone, length, and keywords."""
-    # First, handle the case where the input might be formatted with quotes and parentheses
-    # as seen in the error output
+    # Handle case where input might have extra formatting
     if input_text.startswith("'") and input_text.endswith("'"):
         input_text = input_text[1:-1]  # Remove surrounding quotes
     
-    if "keywords:" in input_text.lower():
-        # Split by "keywords:" to separate the first part from keywords
-        parts = input_text.lower().split("keywords:", 1)
-        first_part = parts[0].strip()
-        keywords = parts[1].strip()
-        
-        # Split the first part by commas to get topic, tone, and length
-        first_parts = first_part.split(",")
-        if len(first_parts) >= 3:
-            topic = first_parts[0].strip()
-            tone = first_parts[1].strip()
-            length = first_parts[2].strip()
-            return topic, tone, length, keywords
+    parts = input_text.split(',', 3)  # Split into max 4 parts
     
-    # If we get here, the format wasn't as expected, try a more forgiving approach
-    parts = input_text.split(",")
-    if len(parts) >= 4:
-        topic = parts[0].strip()
-        tone = parts[1].strip()
-        length = parts[2].strip()
-        keywords = ",".join(parts[3:]).strip()
-        
-        # Check if keywords has the "keywords:" prefix and remove if present
-        if "keywords:" in keywords.lower():
-            keywords = keywords.lower().split("keywords:", 1)[1].strip()
-        
-        return topic, tone, length, keywords
+    if len(parts) < 4:
+        raise ValueError("Input must contain topic, tone, length, and keywords separated by commas. "
+                         "Format: 'topic, tone, length, keywords: keyword1, keyword2'")
     
-    # If all else fails, raise an error
-    raise ValueError(f"Could not parse input: {input_text}. Expected format: 'topic, tone, length, keywords: keyword1, keyword2'")
+    topic = parts[0].strip()
+    tone = parts[1].strip()
+    length = parts[2].strip()
+    
+    # Extract keywords from the last part
+    keywords_part = parts[3].strip()
+    if "keywords:" not in keywords_part.lower():
+        raise ValueError("Keywords section must be formatted as 'keywords: keyword1, keyword2, etc'")
+    
+    keywords = keywords_part.split('keywords:', 1)[1].strip()
+    
+    return topic, tone, length, keywords
 
-def generate_article(input_text):
-    """Generate a blog post based on the input text."""
-    from models.openai import initialize_llm  # Import here to avoid circular dependency
+@tool
+def generate_article(input_text: str) -> str:
+    """Generate a blog post based on the input text.
     
+    The input_text must contain topic, tone, length, and keywords information in the format:
+    'topic, tone, length, keywords: keyword1, keyword2, etc'
+    """
     try:
         # Try to parse the input
         topic, tone, length, keywords = parse_input(input_text)
@@ -79,3 +55,18 @@ def generate_article(input_text):
         print(error_message)
         # Re-raise the error for proper handling
         raise
+
+# Function version for direct use in the graph
+def generate_article_direct(topic: str, tone: str, length: str, keywords: str) -> str:
+    """Generate a blog post with the given parameters.
+    This function is meant to be called directly from the graph, not as a tool.
+    """
+    llm = initialize_llm()
+    
+    response = llm.invoke(article_prompt.format_prompt(
+        topic=topic, 
+        tone=tone, 
+        length=length, 
+        keywords=keywords
+    ))
+    return response.content
