@@ -1,3 +1,4 @@
+# SEOoptimization/agents/state.py
 from typing import TypedDict, List, Dict, Any, Optional
 from langchain_core.messages import BaseMessage
 
@@ -15,6 +16,7 @@ class AgentState(TypedDict):
     
     # Processing state
     messages: List[BaseMessage]  # Conversation history
+    seo_analysis: Optional[Dict[str, Any]]  # SEO analysis results
     article_draft: Optional[str]  # Generated article draft
     final_article: Optional[str]  # SEO-optimized article
     
