@@ -5,6 +5,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import sys
+import random
 from googlesearch import search
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import numpy as np
@@ -23,13 +24,17 @@ from sklearn.metrics.pairwise import cosine_similarity
 from rank_bm25 import BM25Okapi
 import torch
 
+from SEOoptimization.utils.model_manager import model_manager
+
 class BM_RAGAM:
     def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         
     def compute_bm25_scores(self, query: str, documents: List[str]) -> np.ndarray:
         """Compute BM25 scores for documents."""
+        if not documents:
+            return np.array([])
+            
         tokenized_docs = [doc.lower().split() for doc in documents]
         tokenized_query = query.lower().split()
         bm25 = BM25Okapi(tokenized_docs)
@@ -37,13 +42,14 @@ class BM_RAGAM:
     
     def compute_semantic_scores(self, query: str, documents: List[str]) -> np.ndarray:
         """Compute semantic similarity scores using transformer embeddings."""
-        query_embedding = self.encoder.encode([query], convert_to_tensor=True)
-        doc_embeddings = self.encoder.encode(documents, convert_to_tensor=True)
+        if not documents:
+            return np.array([])
+            
+        # Use the model manager to get embeddings
+        query_embedding = model_manager.encode_text([query], batch_size=1)
+        doc_embeddings = model_manager.encode_text(documents, batch_size=8)
         
-        similarities = cosine_similarity(
-            query_embedding.cpu().numpy(),
-            doc_embeddings.cpu().numpy()
-        )[0]
+        similarities = cosine_similarity([query_embedding[0]], doc_embeddings)[0]
         return similarities
     
     def compute_attention_weights(self, bm25_scores: np.ndarray, semantic_scores: np.ndarray) -> Tuple[float, float]:
@@ -81,7 +87,6 @@ class BM_RAGAM:
 
 class VectorizedKnowledgeBase:
     def __init__(self):
-        self.encoder = SentenceTransformer('all-MiniLM-L6-v2')
         self.document_vectors = None
         self.documents = []
         self.urls = []
@@ -93,19 +98,30 @@ class VectorizedKnowledgeBase:
             
         self.documents.extend(documents)
         self.urls.extend(urls)
-        new_vectors = self.encoder.encode(documents)
+        
+        # Use the model manager to get embeddings efficiently
+        new_vectors = model_manager.encode_text(documents, batch_size=8)
         
         if self.document_vectors is None:
             self.document_vectors = new_vectors
         else:
-            self.document_vectors = np.vstack([self.document_vectors, new_vectors])
+            try:
+                self.document_vectors = np.vstack([self.document_vectors, new_vectors])
+            except ValueError as e:
+                print(f"Error combining document vectors: {e}")
+                # If there's an error with vstack, ensure dimensions match
+                if self.document_vectors.shape[1] == new_vectors.shape[1]:
+                    print("Attempting to recover by recreating document vectors")
+                    # Recreate all vectors to ensure consistency
+                    self.document_vectors = model_manager.encode_text(self.documents, batch_size=8)
     
     def search(self, query: str, top_k: int = 5) -> List[Tuple[str, str, float]]:
         """Search for most relevant documents."""
-        if not self.documents or not self.document_vectors.any():
+        if not self.documents or self.document_vectors is None or not hasattr(self.document_vectors, 'shape'):
             return []
             
-        query_vector = self.encoder.encode([query])[0]
+        # Use the model manager to get query embedding
+        query_vector = model_manager.encode_text([query], batch_size=1)[0]
         
         # Compute similarities
         similarities = cosine_similarity([query_vector], self.document_vectors)[0]
@@ -220,12 +236,37 @@ class EnhancedWebScraper:
         Returns:
             A tuple (url, content, seo_elements).
         """
+        # Validate URL before attempting to fetch
+        if not url.startswith(('http://', 'https://')):
+            print(f"Error processing {url}: Invalid URL format - missing scheme")
+            return url, None, None
+            
         try:
             headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive',
             }
-            response = requests.get(url, timeout=timeout, headers=headers)
-            response.raise_for_status()
+            
+            # Implement exponential backoff retry logic
+            max_retries = 3
+            retry_delay = 1  # Initial delay in seconds
+            
+            for attempt in range(max_retries):
+                try:
+                    response = requests.get(url, timeout=timeout, headers=headers)
+                    response.raise_for_status()
+                    break  # Success, exit retry loop
+                except (requests.ConnectionError, requests.Timeout) as e:
+                    if attempt < max_retries - 1:  # Don't sleep on the last attempt
+                        retry_delay_with_jitter = retry_delay * (1 + 0.2 * random.random())
+                        print(f"Attempt {attempt+1} failed for {url}: {str(e)}. Retrying in {retry_delay_with_jitter:.2f}s...")
+                        time.sleep(retry_delay_with_jitter)
+                        retry_delay *= 2  # Exponential backoff
+                    else:
+                        raise  # Re-raise the exception on the last attempt
+            
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Extract main content
@@ -238,9 +279,14 @@ class EnhancedWebScraper:
             if content and len(content) > 50:
                 return url, content, seo_elements
             else:
+                print(f"Content too short or not found for {url}")
                 return url, None, None
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Request error processing {url}: {str(e)}")
+            return url, None, None
         except Exception as e:
-            print(f"Error processing {url}: {e}")
+            print(f"Unexpected error processing {url}: {str(e)}")
             return url, None, None
 
     def parse_google_results(self, query: str, num_search: int = NUM_SEARCH) -> Tuple[Dict[str, str], List[Dict]]:
@@ -250,12 +296,34 @@ class EnhancedWebScraper:
         """
         # Step 1: Get initial URLs from Google
         try:
-            urls = list(search(query, num_results=num_search))
+            # Add sleep before search to reduce chance of being blocked
+            time.sleep(1)
+            
+            # Ensure query is properly formatted
+            safe_query = query.strip()
+            if not safe_query:
+                raise ValueError("Empty search query")
+                
+            print(f"Searching for: {safe_query}")
+            urls = list(search(safe_query, num_results=num_search))
+            
+            # Validate URLs
+            valid_urls = []
+            for url in urls:
+                if url and isinstance(url, str) and url.startswith(('http://', 'https://')):
+                    valid_urls.append(url)
+                else:
+                    print(f"Skipping invalid URL: {url}")
+            
+            urls = valid_urls
+            print(f"Found {len(urls)} valid search results")
+            
         except Exception as e:
             print(f"Error in Google search: {e}")
             urls = []
         
         if not urls:
+            print("No valid URLs found from search results")
             return {}, []
             
         # Step 2: Fetch webpage content concurrently
@@ -305,32 +373,56 @@ class EnhancedWebScraper:
                 
         return filtered_results, ranked_seo_analyses
 
+from SEOoptimization.utils.cache import SEOCache
+
 class SEOAnalyzer:
     """
     Analyzes and extracts SEO insights from web content
     """
     
-    def __init__(self):
+    def __init__(self, use_cache: bool = True):
         self.scraper = EnhancedWebScraper()
+        self.cache = SEOCache() if use_cache else None
     
-    def analyze_keyword(self, keyword: str, num_results: int = 10) -> Dict[str, Any]:
+    def analyze_keyword(self, keyword: str, num_results: int = 10, force_refresh: bool = False) -> Dict[str, Any]:
         """
         Analyzes search results for a specific keyword and returns SEO insights.
+        
+        Args:
+            keyword: The keyword or query to analyze
+            num_results: Number of search results to analyze
+            force_refresh: Whether to force a fresh analysis (ignore cache)
+            
+        Returns:
+            Dictionary containing SEO insights and recommendations
         """
+        # Check cache first if enabled and not forcing refresh
+        if self.cache and not force_refresh:
+            cached_results = self.cache.get(keyword)
+            if cached_results:
+                print(f"Using cached SEO analysis for: {keyword}")
+                return cached_results
+        
+        print(f"Performing fresh SEO analysis for: {keyword}")
+        
         # Search for the keyword
         content_dict, seo_analyses = self.scraper.parse_google_results(keyword, num_results)
         
         if not content_dict or not seo_analyses:
-            return {
+            results = {
                 "keyword": keyword,
                 "error": "No valid search results found",
                 "recommendations": []
             }
+        else:
+            # Analyze search results for SEO patterns
+            results = self._extract_seo_insights(keyword, content_dict, seo_analyses)
         
-        # Analyze search results for SEO patterns
-        insights = self._extract_seo_insights(keyword, content_dict, seo_analyses)
+        # Cache the results if caching is enabled
+        if self.cache:
+            self.cache.set(keyword, results)
         
-        return insights
+        return results
     
     def _extract_seo_insights(self, keyword: str, content_dict: Dict[str, str], seo_analyses: List[Dict]) -> Dict[str, Any]:
         """
@@ -465,21 +557,35 @@ class SEOAnalyzer:
         return recommendations
 
 # Function for direct use in the graph
-def analyze_keyword_direct(topic: str, keywords: str) -> Dict[str, Any]:
+def analyze_keyword_direct(topic: str, keywords: str, force_refresh: bool = False) -> Dict[str, Any]:
     """
     Analyze a keyword or topic for SEO insights (for use in the workflow graph).
+    
+    Args:
+        topic: The main topic to analyze
+        keywords: Comma-separated list of keywords
+        force_refresh: Whether to force a fresh analysis (ignore cache)
+        
+    Returns:
+        Dictionary containing SEO insights and recommendations
     """
-    analyzer = SEOAnalyzer()
+    analyzer = SEOAnalyzer(use_cache=True)
     
     # Combine topic and main keyword for search
-    search_query = f"{topic} {keywords.split(',')[0].strip()}"
+    primary_keyword = keywords.split(',')[0].strip()
+    search_query = f"{topic} {primary_keyword}"
+    
+    print(f"Analyzing SEO landscape for: {search_query}")
     
     # Perform analysis
-    analysis_results = analyzer.analyze_keyword(search_query)
+    analysis_results = analyzer.analyze_keyword(search_query, force_refresh=force_refresh)
     
     # Add topic and keywords to results
     analysis_results["topic"] = topic
     analysis_results["keywords"] = keywords
+    
+    # Add timestamp
+    analysis_results["timestamp"] = time.time()
     
     return analysis_results
 
