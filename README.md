@@ -65,12 +65,14 @@ python SEOoptimization/run.py --topic "Premier Provider of End-to-End Technical 
 ```
 
 ### Command Options
---topic:	Topic of the article (required)
---tone:	Tone of the article (default: professional)
---length:	Desired article length (default: 1000 words)
---keywords:	Comma-separated keywords to include (required)
---debug:	Enable debug mode for detailed output
---save:	Save generated artifacts to files
+| Option | Description |
+|------|-------------|
+|--topic:	|Topic of the article (required)|
+|--tone:	|Tone of the article (default: professional|
+|--length:	|Desired article length (default: 1000 words)|
+|--keywords:	|Comma-separated keywords to include (required)|
+|--debug:	|Enable debug mode for detailed output|
+|--save:	|Save generated artifacts to files|
 
 
 
