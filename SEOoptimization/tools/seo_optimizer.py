@@ -1,4 +1,6 @@
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
+from langchain_core.tools import tool
+from SEOoptimization.models.openai import initialize_llm
 
 seo_prompt = PromptTemplate(
     input_variables=["text"],
@@ -21,10 +23,18 @@ seo_prompt = PromptTemplate(
     """
 )
 
-def optimize_for_seo(text):
+@tool
+def optimize_for_seo(text: str) -> str:
     """Optimize the given text for SEO."""
-    from models.openai import initialize_llm  # Import here to avoid circular dependency
-    
+    llm = initialize_llm()
+    response = llm.invoke(seo_prompt.format_prompt(text=text))
+    return response.content
+
+# Function version for direct use in the graph
+def optimize_for_seo_direct(text: str) -> str:
+    """Optimize the given text for SEO.
+    This function is meant to be called directly from the graph, not as a tool.
+    """
     llm = initialize_llm()
     response = llm.invoke(seo_prompt.format_prompt(text=text))
     return response.content
