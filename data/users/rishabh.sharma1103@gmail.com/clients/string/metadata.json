@@ -1,0 +1,14 @@
+{
+  "client_id": "string",
+  "client_name": "Yanmar",
+  "industry": "Manufacturing",
+  "owner_email": "rishabh.sharma1103@gmail.com",
+  "created_at": "2025-03-15 22:41:18.333501",
+  "updated_at": "2025-03-15 22:42:36.754569",
+  "content_types": [
+    "article",
+    "landing_page",
+    "journals",
+    "success_stories"
+  ]
+}

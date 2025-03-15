@@ -11,8 +11,9 @@ from app.schemas.auth import TokenPayload
 from app.services.user_service import get_user_by_email
 
 # Configure OAuth2 password bearer for token handling
+# This URL should match the one you're using in Swagger UI
 oauth2_scheme = OAuth2PasswordBearer(
-    tokenUrl=f"{settings.API_V1_STR}/auth/login"
+    tokenUrl=f"{settings.API_V1_STR}/auth/token"
 )
 
 
