@@ -58,6 +58,7 @@ pip install -r requirements.txt
 python SEOoptimization/run.py --topic "Your Topic" --tone "professional" --length "1200 words" --keywords "keyword1, keyword2, keyword3" --debug --save
 ```
 
+#### Some Examples for writing Articles with Optimized SEO
 
 ```bash
 python SEOoptimization/run.py --topic "A Leader in Innovative Window and Door Solutions" --tone "professional" --length "1500 words" --keywords "window solutions, door technology, innovative designs, energy efficiency, architectural products" --debug --save
