@@ -1,6 +1,6 @@
 from typing import Optional
-
 from pydantic import BaseModel, EmailStr
+from app.models.user import UserRole
 
 
 class Token(BaseModel):
@@ -27,3 +27,4 @@ class UserCreate(BaseModel):
     password: str
     full_name: Optional[str] = None
     company: Optional[str] = None
+    role: UserRole = UserRole.CONTENT_WRITER

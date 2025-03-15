@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.api import auth, users, clients, content, preferences, seo
+from app.api import auth, users, clients, content, preferences, seo, files
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -25,6 +25,7 @@ app.include_router(clients.router, prefix=settings.API_V1_STR, tags=["clients"])
 app.include_router(content.router, prefix=settings.API_V1_STR, tags=["content"])
 app.include_router(preferences.router, prefix=settings.API_V1_STR, tags=["preferences"])
 app.include_router(seo.router, prefix=settings.API_V1_STR, tags=["seo"])
+app.include_router(files.router, prefix=settings.API_V1_STR, tags=["files"])
 
 
 @app.get("/")

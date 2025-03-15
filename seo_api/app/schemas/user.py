@@ -3,12 +3,15 @@ from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr
 
+from app.models.user import UserRole
+
 
 class UserBase(BaseModel):
     """Base user schema."""
     email: EmailStr
     full_name: Optional[str] = None
     company: Optional[str] = None
+    role: UserRole
 
 
 class UserProfile(UserBase):
@@ -22,6 +25,7 @@ class UserUpdate(BaseModel):
     """User update request schema."""
     full_name: Optional[str] = None
     company: Optional[str] = None
+    role: Optional[UserRole] = None
 
 
 class UserStyleProfile(BaseModel):

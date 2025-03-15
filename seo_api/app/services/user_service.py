@@ -1,13 +1,17 @@
 from datetime import datetime
 from typing import List, Optional
 
-from app.models.user import User, UserStyle
+from app.models.user import User, UserStyle, UserRole
 from app.services.file_service import FileService
 from app.utils.security import get_password_hash, verify_password
 
 
 def create_user(
-    email: str, password: str, full_name: Optional[str] = None, company: Optional[str] = None
+    email: str, 
+    password: str, 
+    full_name: Optional[str] = None, 
+    company: Optional[str] = None,
+    role: UserRole = UserRole.CONTENT_WRITER
 ) -> User:
     """
     Create a new user.
@@ -17,6 +21,7 @@ def create_user(
         password: User's password
         full_name: User's full name
         company: User's company
+        role: User's role
         
     Returns:
         User: Created user
@@ -36,6 +41,7 @@ def create_user(
         hashed_password=hashed_password,
         full_name=full_name,
         company=company,
+        role=role,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow()
     )
@@ -84,7 +90,8 @@ def authenticate_user(email: str, password: str) -> Optional[User]:
 def update_user(
     email: str, 
     full_name: Optional[str] = None,
-    company: Optional[str] = None
+    company: Optional[str] = None,
+    role: Optional[UserRole] = None
 ) -> Optional[User]:
     """
     Update a user's information.
@@ -93,6 +100,7 @@ def update_user(
         email: User's email
         full_name: Updated full name
         company: Updated company
+        role: Updated role
         
     Returns:
         User: Updated user or None if user not found
@@ -107,6 +115,9 @@ def update_user(
     
     if company is not None:
         user.company = company
+    
+    if role is not None:
+        user.role = role
     
     user.updated_at = datetime.utcnow()
     
