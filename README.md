@@ -28,18 +28,27 @@ This project is an advanced AI-powered SEO optimization system designed to gener
 ## Installation
 
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/ris3abh/Spinutech.git
-   cd Spinutech
-   ```
+```bash
+git clone https://github.com/ris3abh/Spinutech.git
+cd Spinutech
+```
 
 2. Python Virtual Env:
-  ``` bash
-  python -m venv venv
-  source venv/bin/activate  # On Windows: venv\Scripts\activate 
-  ```
+``` bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate 
+```
 
 3. Add your .env file and populate it with OPENAI_API_KEY
+```bash
+touch .env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+4. Install requirements:
+```bash
+pip install -r requirements.txt
+```
 
 ### Usage:
 
