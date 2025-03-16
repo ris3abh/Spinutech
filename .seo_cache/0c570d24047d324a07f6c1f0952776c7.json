@@ -1,0 +1,27 @@
+{
+  "timestamp": 1742146182.576297,
+  "query": "AI in Healthcare AI",
+  "data": {
+    "keyword": "AI in Healthcare AI",
+    "analyzed_urls": 9,
+    "avg_word_count": 3272.777777777778,
+    "title_patterns": [],
+    "heading_patterns": [],
+    "keyword_density": {
+      "avg": 0.0,
+      "title": 0.0,
+      "headings": 0.0,
+      "content": 0.0
+    },
+    "link_patterns": {
+      "avg_internal": 63.333333333333336,
+      "avg_external": 62.44444444444444
+    },
+    "recommendations": [
+      "Target word count: 3272 words based on top-ranking pages",
+      "Include approximately 63 internal links",
+      "Include approximately 62 external links to authoritative sources",
+      "Further organize content with 7 H3 subsections"
+    ]
+  }
+}

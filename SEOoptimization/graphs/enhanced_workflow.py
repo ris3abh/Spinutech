@@ -8,7 +8,7 @@ import sys
 from datetime import datetime
 from typing import Literal, Dict, Any, List, Optional
 
-from langchain.graphs import StateGraph, END
+from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage
 
 from SEOoptimization.agents.enhanced_state import EnhancedAgentState
