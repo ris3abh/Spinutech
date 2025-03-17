@@ -1,0 +1,29 @@
+{
+  "timestamp": 1742146753.378158,
+  "query": "Enterprise Cloud Solutions cloud computing",
+  "data": {
+    "keyword": "Enterprise Cloud Solutions cloud computing",
+    "analyzed_urls": 8,
+    "avg_word_count": 1682.5,
+    "title_patterns": [],
+    "heading_patterns": [],
+    "keyword_density": {
+      "avg": 0.0,
+      "title": 0.0,
+      "headings": 0.0,
+      "content": 0.0
+    },
+    "link_patterns": {
+      "avg_internal": 53.875,
+      "avg_external": 12.125
+    },
+    "recommendations": [
+      "Target word count: 1682 words based on top-ranking pages",
+      "Include approximately 53 internal links",
+      "Include approximately 12 external links to authoritative sources",
+      "Use 1 H1 tag(s) - the top result does this",
+      "Structure your content with approximately 10 H2 sections",
+      "Further organize content with 30 H3 subsections"
+    ]
+  }
+}
